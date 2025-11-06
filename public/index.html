@@ -1,0 +1,192 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1">
+    <title>🎬 Avaliação de Filmes (Mock)</title>
+    <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.3/dist/css/bootstrap.min.css" rel="stylesheet">
+</head>
+
+<body class="bg-light">
+    <div class="container py-5">
+        <h1 class="mb-4 text-center">Avaliação de Filmes</h1>
+
+        <!-- Formulário para adicionar filme -->
+        <div class="card mb-4">
+            <div class="card-body">
+                <h5 class="card-title">Adicionar novo filme</h5>
+                <div class="input-group">
+                    <input type="text" id="novoFilme" class="form-control" placeholder="Nome do filme">
+                    <button class="btn btn-primary" onclick="adicionarFilme()">Adicionar</button>
+                </div>
+            </div>
+        </div>
+
+        <!-- Lista de filmes -->
+        <div id="listaFilmes" class="row g-3"></div>
+    </div>
+
+    <!-- Modal de avaliações -->
+    <div class="modal fade" id="avaliacoesModal" tabindex="-1">
+        <div class="modal-dialog modal-dialog-scrollable">
+            <div class="modal-content">
+                <div class="modal-header">
+                    <h5 id="modalTitulo" class="modal-title">Avaliações</h5>
+                    <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
+                </div>
+                <div class="modal-body">
+                    <ul id="listaAvaliacoes" class="list-group mb-3"></ul>
+
+                    <h6>Nova avaliação</h6>
+                    <input type="text" id="usuario" class="form-control mb-2" placeholder="Seu nome">
+                    <input type="number" id="nota" class="form-control mb-2" placeholder="Nota (0 a 10)" min="0"
+                        max="10">
+                    <button class="btn btn-success w-100" onclick="enviarAvaliacao()">Enviar</button>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.3/dist/js/bootstrap.bundle.min.js"></script>
+    <script>
+        // Não usamos mais o mock 'filmes' ou 'avaliacoesMock'
+        let filmeAtual = null; // Guarda o ID do filme no modal
+        const myModal = new bootstrap.Modal(document.getElementById("avaliacoesModal"));
+
+        // ----- Função para carregar filmes (agora via API) -----
+        async function carregarFilmes() {
+            try {
+                const response = await fetch('/api/filmes');
+                if (!response.ok) throw new Error('Falha ao carregar filmes');
+
+                const filmes = await response.json();
+
+                const container = document.getElementById("listaFilmes");
+                container.innerHTML = ""; // Limpa a lista atual
+
+                if (filmes.length === 0) {
+                    container.innerHTML = '<p class="text-center text-muted">Nenhum filme cadastrado ainda.</p>';
+                    return;
+                }
+
+                filmes.forEach(f => {
+                    // Note que agora usamos f.id (que é um UUID)
+                    container.innerHTML += `
+                    <div class="col-md-4">
+                        <div class="card shadow-sm">
+                        <div class="card-body text-center">
+                            <h5 class="card-title">${f.nome}</h5>
+                            <button class="btn btn-outline-primary btn-sm"
+                            onclick="verAvaliacoes('${f.id}', '${f.nome}')">Ver avaliações</button>
+                        </div>
+                        </div>
+                    </div>`;
+                });
+            } catch (err) {
+                console.error(err);
+                alert("Erro ao carregar filmes.");
+            }
+        }
+
+        // ----- Função para adicionar filme (agora via API) -----
+        async function adicionarFilme() {
+            const nomeInput = document.getElementById("novoFilme");
+            const nome = nomeInput.value.trim();
+            if (!nome) return alert("Digite o nome do filme!");
+
+            try {
+                const response = await fetch('/api/filmes', {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({ nome: nome })
+                });
+
+                if (!response.ok) throw new Error('Falha ao adicionar filme');
+
+                nomeInput.value = ""; // Limpa o input
+                carregarFilmes(); // Recarrega a lista
+            } catch (err) {
+                console.error(err);
+                alert("Erro ao adicionar filme.");
+            }
+        }
+
+        // ----- Função para ver avaliações (agora via API) -----
+        async function verAvaliacoes(id_filme, nome) {
+            filmeAtual = id_filme; // Guarda o ID do filme que está sendo visto
+
+            const modalTitulo = document.getElementById("modalTitulo");
+            modalTitulo.textContent = `Avaliações de: ${nome}`;
+
+            const lista = document.getElementById("listaAvaliacoes");
+            lista.innerHTML = '<li class="list-group-item text-center">Carregando...</li>';
+
+            myModal.show(); // Mostra o modal imediatamente
+
+            try {
+                const response = await fetch(`/api/filmes/${id_filme}/avaliacoes`);
+                if (!response.ok) throw new Error('Falha ao buscar avaliações');
+
+                const avals = await response.json();
+
+                if (avals.length === 0) {
+                    lista.innerHTML = '<li class="list-group-item text-muted">Nenhuma avaliação ainda.</li>';
+                    return;
+                }
+
+                lista.innerHTML = avals.map(a => `
+                <li class="list-group-item">
+                <strong>${a.usuario}</strong> — Nota ${a.nota} <br>
+                <small>${new Date(a.data).toLocaleString()}</small>
+                </li>`).join("");
+
+            } catch (err) {
+                console.error(err);
+                lista.innerHTML = '<li class="list-group-item text-danger">Erro ao carregar avaliações.</li>';
+            }
+        }
+
+        // ----- Função para enviar avaliação (agora via API) -----
+        async function enviarAvaliacao() {
+            if (!filmeAtual) return; // Não deve acontecer, mas é uma segurança
+
+            const usuarioInput = document.getElementById("usuario");
+            const notaInput = document.getElementById("nota");
+
+            const usuario = usuarioInput.value.trim();
+            const nota = parseInt(notaInput.value);
+
+            if (!usuario || isNaN(nota) || nota < 0 || nota > 10) {
+                return alert("Preencha seu nome e uma nota válida (0 a 10)!");
+            }
+
+            try {
+                const response = await fetch(`/api/filmes/${filmeAtual}/avaliacoes`, {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({ usuario, nota })
+                });
+
+                if (!response.ok) throw new Error('Falha ao enviar avaliação');
+
+                usuarioInput.value = "";
+                notaInput.value = "";
+
+                // Recarrega apenas as avaliações do modal
+                const modalTitulo = document.getElementById("modalTitulo").textContent;
+                const nomeFilme = modalTitulo.replace('Avaliações de: ', '');
+                verAvaliacoes(filmeAtual, nomeFilme);
+
+            } catch (err) {
+                console.error(err);
+                alert("Erro ao enviar sua avaliação.");
+            }
+        }
+
+        // ----- Inicializa a página -----
+        carregarFilmes();
+    </script>
+</body>
+
+</html>

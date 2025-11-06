@@ -1,0 +1,20 @@
+version: '3.8'
+
+services:
+  # Serviço do banco de dados Cassandra
+  cassandra:
+    image: cassandra:4.1 # Usa uma versão específica e estável
+    ports:
+      - "9042:9042" # Porta padrão do Cassandra (CQL)
+    environment:
+      - CASSANDRA_SEEDS=cassandra
+      - CASSANDRA_CLUSTER_NAME=MyCluster
+      - CASSANDRA_DC=datacenter1
+      - CASSANDRA_RACK=rack1
+      - CASSANDRA_RPC_ADDRESS=0.0.0.0 # Garante que o Cassandra aceite conexões externas
+    healthcheck:
+      # Usa nodetool para uma verificação de saúde mais confiável
+      test: ["CMD-SHELL", "nodetool status | grep -E '^UN'"]
+      interval: 15s
+      timeout: 10s
+      retries: 10

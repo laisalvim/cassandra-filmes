@@ -1,0 +1,26 @@
+{
+  "name": "cassandra-filmes",
+  "version": "1.0.0",
+  "description": "",
+  "main": "src/index.js",
+  "scripts": {
+    "start": "node src/index.js"
+  },
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/laisalvim/cassandra-filmes.git"
+  },
+  "keywords": [],
+  "author": "",
+  "license": "ISC",
+  "type": "module",
+  "bugs": {
+    "url": "https://github.com/laisalvim/cassandra-filmes/issues"
+  },
+  "homepage": "https://github.com/laisalvim/cassandra-filmes#readme",
+  "dependencies": {
+    "cassandra-driver": "^4.8.0",
+    "dotenv": "^17.2.3",
+    "express": "^5.1.0"
+  }
+}
